@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/svg+xml" href="Group 3.svg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyatomic Ions — Piece together elements, subscripts, and charges.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pill-black: #000000;
+            --correct-green: #B6C26F;
+            --error-yellow: #f1c40f;
+            --bg-color: #DCFDA7;
+            --font-main: 'Libre Franklin', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 900px;
+            height: 650px;
+            background: #DCFDA7;
+            border-radius: 20px;
+            position: relative;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hidden { display: none !important; }
+
+        #title-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .custom-logo { width: 280px; height: auto; margin-bottom: 20px; }
+        h1 { font-weight: 900; font-size: 3.5rem; margin: 0 0 40px 0; }
+
+        .pill-button {
+            background: var(--pill-black);
+            color: white;
+            padding: 15px 60px;
+            border-radius: 50px;
+            border: none;
+            font-family: var(--font-main);
+            font-weight: 700;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            left: 5%;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+        }
+
+        #ion-name { font-size: 2.5rem; margin-top: 60px; font-weight: 900; min-height: 1.2em; }
+
+        #formula-zone {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 180px;
+            gap: 5px;
+            margin-top: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .slot {
+            border: 3px dashed #bbb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 8px;
+        }
+
+        .slot.element { width: 75px; height: 75px; font-size: 2rem; }
+        .slot.subscript { width: 40px; height: 40px; align-self: flex-end; font-size: 1.2rem; margin-bottom: 25px;}
+        .slot.charge { width: 45px; height: 45px; align-self: flex-start; font-size: 1.2rem; margin-top: 25px;}
+
+        .slot.occupied { border-style: solid; border-color: var(--pill-black); }
+        .slot.correct { background-color: var(--correct-green) !important; border: none; }
+        .slot.revealed { background-color: var(--error-yellow) !important; border: none; }
+
+        #inventory {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 30px;
+            min-height: 120px;
+            padding: 0 20px;
+        }
+
+        .tile {
+            background: #e0e0e0;
+            border: 2px solid #666;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            user-select: none;
+            border-radius: 6px;
+        }
+
+        .tile.element { width: 65px; height: 65px; font-size: 1.8rem; }
+        .tile.small { width: 38px; height: 38px; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="title-screen">
+        <img src="Logo.svg" alt="Logo" class="custom-logo">
+        <h1>Polyatomic Ions</h1>
+        <button class="pill-button" onclick="startGame()">Play</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="stats">
+            <span>Correct: <span id="score">0</span></span>
+            <span>Streak: <span id="streak">0</span></span>
+            <span>Attempts: <span id="attempts">3</span></span>
+        </div>
+        <h2 id="ion-name"></h2>
+        <div id="formula-zone"></div>
+        <div id="inventory"></div>
+        <div id="controls" style="margin-top: 25px;">
+            <button id="check-btn" class="pill-button hidden" onclick="checkAnswer()">Check?</button>
+            <button id="next-btn" class="pill-button hidden" onclick="nextQuestion()">Next ➜</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ionData = [
+        { n: "Acetate", f: [{v:"C",t:"element"},{v:"2",t:"subscript"},{v:"H",t:"element"},{v:"3",t:"subscript"},{v:"O",t:"element"},{v:"2",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hydroxide", f: [{v:"O",t:"element"},{v:"H",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Amide", f: [{v:"N",t:"element"},{v:"H",t:"element"},{v:"2",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Permanganate", f: [{v:"Mn",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Nitrate", f: [{v:"N",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Nitrite", f: [{v:"N",t:"element"},{v:"O",t:"element"},{v:"2",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Chlorite", f: [{v:"Cl",t:"element"},{v:"O",t:"element"},{v:"2",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hypochlorite", f: [{v:"Cl",t:"element"},{v:"O",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Chlorate", f: [{v:"Cl",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Perchlorate", f: [{v:"Cl",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Bicarbonate", f: [{v:"H",t:"element"},{v:"C",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hydrogen Sulfate", f: [{v:"H",t:"element"},{v:"S",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hydrogen Sulfite", f: [{v:"H",t:"element"},{v:"S",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hydrogen Oxalate", f: [{v:"H",t:"element"},{v:"C",t:"element"},{v:"2",t:"subscript"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Dihydrogen Phosphate", f: [{v:"H",t:"element"},{v:"2",t:"subscript"},{v:"P",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hydrogen Sulfide", f: [{v:"H",t:"element"},{v:"S",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Thiocyanate", f: [{v:"S",t:"element"},{v:"C",t:"element"},{v:"N",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Cyanide", f: [{v:"C",t:"element"},{v:"N",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Iodate", f: [{v:"I",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Periodate", f: [{v:"I",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hypoiodite", f: [{v:"I",t:"element"},{v:"O",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Bromate", f: [{v:"Br",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"1-",t:"charge"}] },
+        { n: "Hypobromite", f: [{v:"Br",t:"element"},{v:"O",t:"element"},{v:"1-",t:"charge"}] },
+        { n: "Carbonate", f: [{v:"C",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Peroxide", f: [{v:"O",t:"element"},{v:"2",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Tartrate", f: [{v:"C",t:"element"},{v:"4",t:"subscript"},{v:"H",t:"element"},{v:"4",t:"subscript"},{v:"O",t:"element"},{v:"6",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Thiosulfate", f: [{v:"S",t:"element"},{v:"2",t:"subscript"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Oxalate", f: [{v:"C",t:"element"},{v:"2",t:"subscript"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Selenate", f: [{v:"Se",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Silicate", f: [{v:"Si",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Tetraborate", f: [{v:"B",t:"element"},{v:"4",t:"subscript"},{v:"O",t:"element"},{v:"7",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Hexafluorosilicate", f: [{v:"Si",t:"element"},{v:"F",t:"element"},{v:"6",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Hydrogen Phosphate", f: [{v:"H",t:"element"},{v:"P",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Sulfate", f: [{v:"S",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Sulfite", f: [{v:"S",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Chromate", f: [{v:"Cr",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Dichromate", f: [{v:"Cr",t:"element"},{v:"2",t:"subscript"},{v:"O",t:"element"},{v:"7",t:"subscript"},{v:"2-",t:"charge"}] },
+        { n: "Borate", f: [{v:"B",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"3-",t:"charge"}] },
+        { n: "Arsenate", f: [{v:"As",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"3-",t:"charge"}] },
+        { n: "Phosphate", f: [{v:"P",t:"element"},{v:"O",t:"element"},{v:"4",t:"subscript"},{v:"3-",t:"charge"}] },
+        { n: "Phosphite", f: [{v:"P",t:"element"},{v:"O",t:"element"},{v:"3",t:"subscript"},{v:"3-",t:"charge"}] },
+        { n: "Ammonium", f: [{v:"N",t:"element"},{v:"H",t:"element"},{v:"4",t:"subscript"},{v:"+",t:"charge"}] },
+        { n: "Hydronium", f: [{v:"H",t:"element"},{v:"3",t:"subscript"},{v:"O",t:"element"},{v:"+",t:"charge"}] }
+    ];
+
+    let gameIons = [];
+    let currentIdx = 0;
+    let score = 0;
+    let streak = 0;
+    let attempts = 3;
+    let draggedTile = null;
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function startGame() {
+        gameIons = shuffle([...ionData]);
+        currentIdx = 0;
+        document.getElementById('title-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        loadIon();
+    }
+
+    function loadIon() {
+        const ion = gameIons[currentIdx];
+        document.getElementById('ion-name').innerText = ion.n;
+        attempts = 3;
+        updateStats();
+
+        const zone = document.getElementById('formula-zone');
+        const inv = document.getElementById('inventory');
+        zone.innerHTML = ''; inv.innerHTML = '';
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('check-btn').classList.add('hidden');
+        inv.classList.remove('hidden');
+
+        ion.f.forEach((part) => {
+            const slot = document.createElement('div');
+            slot.className = `slot ${part.t}`;
+            slot.dataset.expected = part.v;
+            slot.ondragover = e => e.preventDefault();
+            slot.ondrop = handleDrop;
+            zone.appendChild(slot);
+        });
+
+        let tiles = shuffle([...ion.f]);
+        tiles.forEach(t => {
+            const tile = document.createElement('div');
+            tile.className = `tile ${t.t === 'element' ? 'element' : 'small'}`;
+            tile.innerText = t.v;
+            tile.draggable = true;
+            tile.dataset.val = t.v;
+            tile.ondragstart = () => { draggedTile = tile; };
+            inv.appendChild(tile);
+        });
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (e.currentTarget.children.length > 0) return;
+        e.currentTarget.appendChild(draggedTile);
+        e.currentTarget.classList.add('occupied');
+        if (Array.from(document.querySelectorAll('.slot')).every(s => s.children.length > 0)) {
+            document.getElementById('check-btn').classList.remove('hidden');
+            document.getElementById('inventory').classList.add('hidden');
+        }
+    }
+
+    function checkAnswer() {
+        const slots = document.querySelectorAll('.slot');
+        let correct = true;
+        slots.forEach(slot => {
+            const tile = slot.children[0];
+            if (tile.dataset.val === slot.dataset.expected) {
+                slot.classList.add('correct');
+                slot.classList.remove('occupied');
+            } else {
+                correct = false;
+                document.getElementById('inventory').appendChild(tile);
+                slot.classList.remove('occupied');
+            }
+        });
+
+        if (correct) {
+            score++; streak++; endTurn();
+        } else {
+            attempts--;
+            if (attempts <= 0) { streak = 0; revealAnswer(); endTurn(); }
+            else { 
+                document.getElementById('inventory').classList.remove('hidden');
+                document.getElementById('check-btn').classList.add('hidden');
+            }
+        }
+        updateStats();
+    }
+
+    function revealAnswer() {
+        document.querySelectorAll('.slot').forEach(slot => {
+            if (!slot.classList.contains('correct')) {
+                slot.innerHTML = slot.dataset.expected;
+                slot.classList.add('revealed');
+            }
+        });
+    }
+
+    function endTurn() {
+        document.getElementById('check-btn').classList.add('hidden');
+        document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+        currentIdx = (currentIdx + 1) % gameIons.length;
+        loadIon();
+    }
+
+    function updateStats() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('streak').innerText = streak;
+        document.getElementById('attempts').innerText = attempts;
+    }
+</script>
+</body>
+</html>
